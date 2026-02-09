@@ -9,7 +9,7 @@ export function Intro() {
       <h4 className="text-center md:text-left text-lg mt-5 md:pl-8">
         A statically generated blog example using{" "}
         <a
-          href="https://nextjs.org/"
+          href="https://trending News.globelynks.com/"
           className="underline hover:text-blue-600 duration-200 transition-colors"
         >
           Next.js
