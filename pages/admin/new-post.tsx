@@ -1,4 +1,4 @@
-"use client"; // optional if using React hooks in Pages Router
+"use client";
 import { useState } from "react";
 import dynamic from "next/dynamic";
 
@@ -16,17 +16,24 @@ export default function NewPostPage() {
     }
   };
 
+  const toBase64 = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const formData = new FormData();
-    formData.append("title", title);
-    formData.append("content", content);
-    images.forEach((img) => formData.append("images", img));
+    // Convert images to Base64
+    const imagesBase64 = await Promise.all(images.map((img) => toBase64(img)));
 
     const res = await fetch("/api/admin/new-post", {
       method: "POST",
-      body: formData,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, content, images: imagesBase64 }),
     });
 
     const data = await res.json();
@@ -36,7 +43,7 @@ export default function NewPostPage() {
       setContent("");
       setImages([]);
     } else {
-      alert("Error: " + (data.error || "Unknown"));
+      alert("Error: " + (data.message || "Unknown"));
     }
   };
 
