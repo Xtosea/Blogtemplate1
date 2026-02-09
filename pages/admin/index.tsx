@@ -10,7 +10,7 @@ export default function AdminDashboard() {
           href="/admin/new-post"
           className="inline-block px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800"
         >
-          Create New Pos
+          Create New Post
         </Link>
       </div>
     </main>
