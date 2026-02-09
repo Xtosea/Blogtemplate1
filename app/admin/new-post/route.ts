@@ -1,10 +1,10 @@
 // app/admin/new-post/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import formidable, { Fields, Files } from "formidable";
+import formidable from "formidable";
 import fs from "fs";
 import path from "path";
 
-// Optional: configure Cloudinary if you plan to use cloud storage
+// Optional: Cloudinary config if you want cloud storage
 // import { v2 as cloudinary } from "cloudinary";
 // cloudinary.config({
 //   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -20,8 +20,8 @@ export const POST = async (req: NextRequest) => {
 
   try {
     // Wrap parse in a Promise for async/await
-    const data = await new Promise<{ fields: Fields; files: Files }>((resolve, reject) => {
-      form.parse(req as any, (err: Error | null, fields: Fields, files: Files) => {
+    const data = await new Promise<{ fields: Record<string, any>; files: Record<string, any> }>((resolve, reject) => {
+      form.parse(req as any, (err, fields, files) => {
         if (err) return reject(err);
         resolve({ fields, files });
       });
@@ -40,7 +40,7 @@ export const POST = async (req: NextRequest) => {
     if (files.images) {
       const fileArray = Array.isArray(files.images) ? files.images : [files.images];
       for (const file of fileArray) {
-        const filename = path.basename((file as any).filepath);
+        const filename = path.basename(file.filepath); // filepath contains the actual file path
         uploadedImages.push("/images/" + filename);
       }
     }
@@ -51,7 +51,7 @@ export const POST = async (req: NextRequest) => {
       mdContent = mdContent.replace(`![](image${idx + 1})`, `![](${img})`);
     });
 
-    // Create frontmatter + content
+    // Create Markdown frontmatter + content
     const finalContent = `---
 title: "${fields.title}"
 slug: "${slug}"
