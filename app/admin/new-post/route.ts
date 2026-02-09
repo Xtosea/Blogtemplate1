@@ -2,56 +2,55 @@
 import { NextRequest, NextResponse } from "next/server";
 import formidable from "formidable";
 import fs from "fs";
-import path from "path";
+import { v2 as cloudinary } from "cloudinary";
 
-// Optional: Cloudinary config if you want cloud storage
-// import { v2 as cloudinary } from "cloudinary";
-// cloudinary.config({
-//   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-//   api_key: process.env.CLOUDINARY_API_KEY,
-//   api_secret: process.env.CLOUDINARY_API_SECRET,
-// });
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
 
 export const POST = async (req: NextRequest) => {
-  const form = new formidable.IncomingForm();
-  form.uploadDir = path.join(process.cwd(), "public/images");
-  form.keepExtensions = true;
-  form.multiples = true;
-
   try {
-    // Wrap parse in a Promise for async/await
-    const data = await new Promise<{ fields: Record<string, any>; files: Record<string, any> }>((resolve, reject) => {
-      form.parse(req as any, (err, fields, files) => {
-        if (err) return reject(err);
-        resolve({ fields, files });
-      });
-    });
+    const form = new formidable.IncomingForm();
+    form.multiples = true; // allow multiple images
+
+    // Wrap formidable parse in a promise
+    const data = await new Promise<{ fields: Record<string, any>; files: Record<string, any> }>(
+      (resolve, reject) => {
+        form.parse(req as any, (err: any, fields: any, files: any) => {
+          if (err) return reject(err);
+          resolve({ fields, files });
+        });
+      }
+    );
 
     const { fields, files } = data;
 
     // Generate slug
     const slug = (fields.slug as string) || (fields.title as string).toLowerCase().replace(/\s+/g, "-");
 
-    // Markdown file path
-    const postPath = path.join(process.cwd(), `_posts/${slug}.md`);
-
-    // Process uploaded images
+    // Upload images to Cloudinary
     const uploadedImages: string[] = [];
     if (files.images) {
       const fileArray = Array.isArray(files.images) ? files.images : [files.images];
       for (const file of fileArray) {
-        const filename = path.basename(file.filepath); // filepath contains the actual file path
-        uploadedImages.push("/images/" + filename);
+        const result = await cloudinary.uploader.upload(file.filepath, {
+          folder: "blog-images",
+        });
+        uploadedImages.push(result.secure_url);
+        fs.unlinkSync(file.filepath); // delete temp local file
       }
     }
 
-    // Replace inline placeholders in Markdown
+    // Replace inline image placeholders in Markdown
     let mdContent = fields.content as string;
     uploadedImages.forEach((img, idx) => {
       mdContent = mdContent.replace(`![](image${idx + 1})`, `![](${img})`);
     });
 
-    // Create Markdown frontmatter + content
+    // Markdown frontmatter
     const finalContent = `---
 title: "${fields.title}"
 slug: "${slug}"
@@ -61,10 +60,10 @@ date: "${new Date().toISOString()}"
 ${mdContent}
 `;
 
-    // Write file to _posts
-    fs.writeFileSync(postPath, finalContent);
+    // Save markdown file in _posts folder
+    fs.writeFileSync(`_posts/${slug}.md`, finalContent);
 
-    return NextResponse.json({ success: true, slug });
+    return NextResponse.json({ success: true });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
