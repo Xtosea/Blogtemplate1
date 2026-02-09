@@ -52,7 +52,7 @@ export default function NewPostPage() {
       <form onSubmit={handleSubmit}>
         <input
           type="text"
-          placeholder="Post Title"
+          placeholder="Post Titl"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className="border p-2 w-full mb-4"
